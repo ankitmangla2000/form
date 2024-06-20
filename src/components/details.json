@@ -1,0 +1,41 @@
+[{
+        "htmlFor": "designeeName",
+        "type": "text",
+        "id": "designeeName",
+        "name": "designeeName",
+        "label": "Designee Name",
+        "placeholder": "Enter Designee Name"
+    },
+    {
+        "htmlFor": "phoneNumber",
+        "type": "text",
+        "id": "phoneNumber",
+        "name": "phoneNumber",
+        "label": "Phone Number",
+        "placeholder": "Enter Phone Number"
+    },
+    {
+        "htmlFor": "pinNumber",
+        "type": "text",
+        "id": "pinNumber",
+        "name": "pinNumber",
+        "label": "PIN Number",
+        "placeholder": "Enter PIN Number"
+    },
+    {
+        "htmlFor": "vinNumber",
+        "type": "text",
+        "id": "vinNumber",
+        "name": "vinNumber",
+        "label": "VIN Number",
+        "placeholder": "Enter VIN Number"
+    },
+    {
+        "htmlFor": "modelNumber",
+        "type": "text",
+        "id": "modelNumber",
+        "name": "modelNumber",
+        "label": "Model Number",
+        "placeholder": "Enter Model Number"
+    }
+]
