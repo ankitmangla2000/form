@@ -1,5 +1,5 @@
-import React from 'react';
-import { Formik, Form, Field,FieldArray, ErrorMessage } from 'formik';
+import React, {useState} from 'react';
+import { Formik, Form, Field,FieldArray, ErrorMessage ,useFormikContext} from 'formik';
 import * as Yup from 'yup';
 import Switch from 'react-switch';
 import './ThirdPartyDesigneeForm.css';
@@ -13,6 +13,7 @@ interface FormValues {
 }
 
 const ThirdPartyDesigneeForm: React.FC = () => {
+  const [addMoreError, setAddMoreError] = useState<string | null>(null);
   const initialValues: FormValues = {
     allowDesignee: false,
     designeeName: '',
@@ -51,10 +52,24 @@ const ThirdPartyDesigneeForm: React.FC = () => {
       ),
   });
 
-  const handleSubmit = (values: FormValues) => {
-    console.log("Form Values:", values);
-    // console.log("Vehicle Details:", values.vehicles);
+  // const handleSubmit = (values: FormValues) => {
+  //   console.log("Form Values:", values);
+  //   // console.log("Vehicle Details:", values.vehicles);
    
+  // };
+  const handleSubmit = (values: FormValues, { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }) => {
+   
+    validationSchema.validate(values, { abortEarly: false }).then(() => {
+  
+      console.log("Form Values:", values);
+    
+    }).catch(errors => {
+     
+      console.error("Validation errors:", errors);
+     
+    }).finally(() => {
+      setSubmitting(false); 
+    });
   };
 
   return (
@@ -64,10 +79,8 @@ const ThirdPartyDesigneeForm: React.FC = () => {
         initialValues={initialValues}
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
-        validateOnChange={true} 
-        validateOnBlur={true}  
       >
-        {({ values, setFieldValue, isValid,errors }) => (
+        {({ values, setFieldValue, isValid, isSubmitting, errors }) => (
           <Form>
             <div className="form-group">
               <label>
@@ -83,19 +96,23 @@ const ThirdPartyDesigneeForm: React.FC = () => {
                 uncheckedIcon={<div className="switch-unchecked">No</div>}
               />
             </div>
-            <div className="form-group-row">
-              {formDetails.slice(0, 3).map((field, index) => (
-                <label key={index} htmlFor={field.htmlFor}>{field.label}</label>
-              ))}
-            </div>
-            <div className="form-group-row">
-              {formDetails.slice(0, 3).map((field, index) => (
-                <div key={index}>
-                  <Field type={field.type} id={field.id} name={field.name} placeholder={field.placeholder} className="form-input" />
-                  <ErrorMessage name={field.name} component="div" className="error" />
+            {values.allowDesignee && (
+              <div className="designee-details">
+                <div className="form-group-row">
+                  {formDetails.slice(0, 3).map((field, index) => (
+                    <label key={index} htmlFor={field.htmlFor}>{field.label}</label>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <div className="form-group-row">
+                  {formDetails.slice(0, 3).map((field, index) => (
+                    <div key={index}>
+                      <Field type={field.type} id={field.id} name={field.name} placeholder={field.placeholder} className="form-input" />
+                      <ErrorMessage name={field.name} component="div" className="error" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <FieldArray name="vehicles">
               {({ push, remove }) => (
                 <div>
@@ -123,9 +140,33 @@ const ThirdPartyDesigneeForm: React.FC = () => {
                       )}
                     </div>
                   ))}
+                   {addMoreError && <div className="error">{addMoreError}</div>}
                   <button
                     type="button"
-                    onClick={() => push({ vinNumber: '', modelNumber: '' })}
+                    onClick={() => {
+                      setAddMoreError(null); 
+                      // Validate all current vehicle entries
+                      const allEntriesValid = values.vehicles.every(vehicle => {
+                        try {
+                          Yup.object().shape({
+                            vinNumber: Yup.string().required('VIN Number is required'),
+                            modelNumber: Yup.string().required('Model Number is required'),
+                          }).validateSync(vehicle, { abortEarly: false });
+                          return true;
+                        } catch (error) {
+                          return false;
+                        }
+                      });
+
+                      if (allEntriesValid) {
+                        // All current entries are valid, add new entry
+                        push({ vinNumber: '', modelNumber: '' });
+                      } else {
+                        // Handle invalid state (e.g., show message)
+                        console.log('Please fill out all fields above.');
+                        setAddMoreError('Please fill out all fields above.');
+                      }
+                    }}
                     className="add-more-button"
                   >
                     Add More
@@ -133,7 +174,7 @@ const ThirdPartyDesigneeForm: React.FC = () => {
                 </div>
               )}
             </FieldArray>
-            <button type="submit" className="submit-button" disabled={!isValid}>
+            <button type="submit" className="submit-button"  >
               Submit
             </button>
           </Form>
