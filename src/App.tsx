@@ -1,11 +1,18 @@
 import React from 'react';
-import logo from './logo.svg';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import './App.css';
 import ThirdPartyDesigneeForm from './components/ThirdPartyDesigneeForm';
+import SecondPage from './components/SecondPage';
+
 
 function App() {
   return (
-    <ThirdPartyDesigneeForm/>
+    <Router>
+      <Routes>
+        <Route path="/form" element={<ThirdPartyDesigneeForm />} />
+        <Route path="/second" element={<SecondPage />} />
+      </Routes>
+    </Router>
   );
 }
 
