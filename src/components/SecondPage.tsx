@@ -7,7 +7,7 @@ const SecondPage: React.FC = () => {
   return (
     <div>
       <h1>Second Page</h1>
-      <button onClick={() => navigate(-1)}>Previous</button>
+      <button onClick={() => navigate('/form')}>Previous</button>
     </div>
   );
 };

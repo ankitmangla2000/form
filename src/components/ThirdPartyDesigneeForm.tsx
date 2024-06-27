@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormik, FieldArray, FormikProvider, ErrorMessage , FormikErrors} from 'formik';
 import * as Yup from 'yup';
 import Switch from 'react-switch';
@@ -68,50 +68,101 @@ const ThirdPartyDesigneeForm: React.FC = () => {
     vehicles: Yup.array().of(vehicleValidationSchema),
   });
 
+  
+  const [savedValues, setSavedValues] = useState<FormValues | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(true);
+  const navigate = useNavigate();
+  
+  const [addMoreErrors, setAddMoreErrors] = useState<string[]>([]);
+ 
+  useEffect(() => {
+    const storedValues = localStorage.getItem('formValues');
+    if (storedValues) {
+      setSavedValues(JSON.parse(storedValues));
+    }
+  }, []);
+  useEffect(() => {
+    if (savedValues) {
+      formik.setValues(savedValues);
+    }
+  }, [savedValues]);
+
   const formik = useFormik({
     initialValues,
     validationSchema,
     onSubmit: (values) => {
       console.log('Form Values:', values);
+      localStorage.setItem('formValues', JSON.stringify(values));
+      setSavedValues(values);
+   
     },
   });
+ 
+  const handleAddMore = async () => {
+    // Validate the entire form including existing vehicle entries
+    const errors = await formik.validateForm();
 
-  const navigate = useNavigate();
-  const [addMoreErrors, setAddMoreErrors] = useState<string[]>([]);
-
-  const handleAddMore = () => {
-    // Validate the last vehicle in the array
-    const lastIndex = formik.values.vehicles.length - 1;
-    const lastVehicle = formik.values.vehicles[lastIndex];
-  
-    vehicleValidationSchema
-      .validate(lastVehicle, { abortEarly: false })
-      .then(() => {
-        // Validation successful, add a new blank vehicle
-        const newVehicle: Vehicle = { vinNumber: '', modelNumber: '' };
-        formik.setFieldValue('vehicles', [...formik.values.vehicles, newVehicle]);
-        setAddMoreErrors((prevErrors) => [...prevErrors, '']);
-      })
-      .catch((validationErrors: Yup.ValidationError) => {
-        // Validation failed, collect and display errors
-        const errors = validationErrors.inner.reduce((acc, error) => {
-          // Append the error message with the field name for proper targeting
-          const fieldName = error.path as keyof Vehicle;
-          return { ...acc, [fieldName]: error.message };
-        }, {} as { [key in keyof Vehicle]?: string });
-  
-        // Set errors in Formik for the last vehicle fields
-        formik.setFieldError(`vehicles[${lastIndex}].vinNumber`, errors.vinNumber || '');
-        formik.setFieldError(`vehicles[${lastIndex}].modelNumber`, errors.modelNumber || '');
-  
-        // Update addMoreErrors state to display errors in UI
-        setAddMoreErrors((prevErrors) => [...prevErrors, validationErrors.message]);
+    if (Object.keys(errors).length === 0) {
+      // Validation successful, add a new blank vehicle
+      const newVehicle: Vehicle = { vinNumber: '', modelNumber: '' };
+      formik.setFieldValue('vehicles', [...formik.values.vehicles, newVehicle]);
+    } else {
+      // Highlight errors on the form
+      formik.setTouched({
+        designee: {
+          allowDesignee: true,
+          designeeName: true,
+          phoneNumber: true,
+          pinNumber: true,
+        },
+        vehicles: formik.values.vehicles.map(() => ({
+          vinNumber: true,
+          modelNumber: true,
+        })),
       });
+    }
   };
-  
+  const handleNext = async () => {
+    // Reset error state
+    setAddMoreErrors([]);
+  formik.setErrors({});
+    const errors = await formik.validateForm();
+    if (Object.keys(errors).length === 0) {
+      formik.submitForm();
+      navigate('/second');
+    } else {
+      formik.setTouched({
+        designee: {
+          allowDesignee: true,
+          designeeName: true,
+          phoneNumber: true,
+          pinNumber: true,
+        },
+        vehicles: formik.values.vehicles.map(() => ({
+          vinNumber: true,
+          modelNumber: true,
+        })),
+      });
+    }
+  };
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+  useEffect(() => {
+    // Clear localStorage on component mount
+    localStorage.removeItem('formValues');
+    formik.resetForm();
+  }, []);
   return (
     <div className="form-container">
       <h1>Third Party Designee</h1>
+      {savedValues && !isEditing ? (
+        <div>
+          <h2>Saved Values</h2>
+          <pre>{JSON.stringify(savedValues, null, 2)}</pre>
+          <button onClick={handleEdit}>Edit</button>
+        </div>
+      ) :(
       <FormikProvider value={formik}>
         <form onSubmit={formik.handleSubmit}>
           <div className="designee-entry">
@@ -149,6 +200,14 @@ const ThirdPartyDesigneeForm: React.FC = () => {
                         className="form-input"
                         value={formik.values.designee[field.name as keyof Designee] as string}
                         onChange={formik.handleChange}
+                        onKeyDown={(event) => {
+                          if (field.name === 'phoneNumber' && (event.key === 'Backspace' || event.key === 'Delete')) {
+                            return;
+                          }
+                          if (field.name === 'phoneNumber'&&(!/\d/.test(event.key))) {
+                            event.preventDefault();
+                          }
+                        }}
 
                         {...(field.name === 'phoneNumber' ? {
                           pattern: '^[0-9]*$',  
@@ -218,7 +277,7 @@ const ThirdPartyDesigneeForm: React.FC = () => {
             )}
           </FieldArray>
           <div className="button-group">
-            <button type="button" className="next-button" onClick={() => navigate('/second')}>
+            <button type="button" className="next-button" onClick={handleNext}>
               Next
             </button>
             <button type="submit" className="submit-button">
@@ -227,7 +286,7 @@ const ThirdPartyDesigneeForm: React.FC = () => {
           </div>
         </form>
       </FormikProvider>
-    </div>
+)}</div>
   );
 };
 
